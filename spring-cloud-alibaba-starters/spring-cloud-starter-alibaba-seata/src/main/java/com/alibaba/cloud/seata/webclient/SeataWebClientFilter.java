@@ -14,26 +14,33 @@
  * limitations under the License.
  */
 
-package com.alibaba.cloud.seata.feign;
+package com.alibaba.cloud.seata.webclient;
 
-import feign.RequestInterceptor;
-import feign.RequestTemplate;
 import org.apache.seata.core.context.RootContext;
+import reactor.core.publisher.Mono;
 
 import org.springframework.util.StringUtils;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
+import org.springframework.web.reactive.function.client.ExchangeFunction;
 
 /**
- * @author wang.liang
+ * @author ChangJin Wei (魏昌进)
  */
-public class SeataFeignRequestInterceptor implements RequestInterceptor {
+public class SeataWebClientFilter implements ExchangeFilterFunction {
 
 	@Override
-	public void apply(RequestTemplate template) {
+	public Mono<ClientResponse> filter(ClientRequest request, ExchangeFunction next) {
 		String xid = RootContext.getXID();
 		if (!StringUtils.hasLength(xid)) {
-			return;
+			return next.exchange(request);
 		}
-
-		template.header(RootContext.KEY_XID, xid);
+		ClientRequest newReq = ClientRequest.from(request)
+				.headers(h -> h.add(RootContext.KEY_XID, xid))
+				.build();
+		return next.exchange(newReq);
 	}
+
+
 }
